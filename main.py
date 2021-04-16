@@ -4,6 +4,8 @@ from sklearn.preprocessing import QuantileTransformer, StandardScaler, Polynomia
 
 import os
 
+from utils import *
+
 seed = 42
 # random.seed(seed)
 os.environ['PYTHONHASHSEED'] = str(seed)
@@ -127,19 +129,30 @@ dataset = dataset.drop(['Cabin'],1)
 # for column in categorical_feature_columns:
 #     dataset[column] = label.fit_transform(dataset[column].astype(str))
 
-print('Whole Dataset:\n', dataset.head())
+# print('Whole Dataset:\n', dataset.head())
 # # print('Description of dataset:\n', dataset.describe(include='all'))
 # # print('Types of columns:\n', dataset.dtypes)
 
-print('Missing values per columns in dataset')
-for col in dataset.columns:
-    temp_col = dataset[col].isnull().sum()
-    print(f'{col}: {temp_col}')
+# print('Missing values per columns in dataset')
+# for col in dataset.columns:
+#     temp_col = dataset[col].isnull().sum()
+#     print(f'{col}: {temp_col}')
 
 print('*********Dataset Information*********\n', dataset.info())
 
+print('*********Unqiue values per columns in dataset*********')
+for col in dataset.columns:
+    temp_col = len(dataset[col].unique())#dataset[col].isnull().sum()
+    # temp_col = dataset[col].unique()#dataset[col].isnull().sum()
+    print(f'{col}: {temp_col}')
+    # print(df[col].unique())
+
 # dataset = dataset.drop(['Age', 'Fare'], 1)
 # print('Whole Dataset:\n', dataset.head())
+
+
+dataset = one_hot_encoding(dataset, cols=['Sex', 'Embarked_Sex', 'Embarked_Pclass'])
+print('Whole Dataset:\n', dataset.head(), dataset.columns)
 
 
 
@@ -160,9 +173,5 @@ print("Score on train:", rf.score(dataset[:train_len],y))
 ypred = rf.predict(dataset[train_len:])
 print("ypred:\n", ypred)
 
-def submit(filename):
-    submission = pd.DataFrame({'PassengerId': test['PassengerId'],'Survived': ypred})
-    # print("Submission:\n", submission.head())
-    submission.to_csv(filename, index=False)
 
-submit("submission3-corr_based_all_missing_val.csv")
+submit("submission4-one-hot-encoding(using corr on all).csv", test, ypred)
