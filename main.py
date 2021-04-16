@@ -52,15 +52,17 @@ for col in dataset.columns:
     print(f'{col}: {temp_col}')
 
 categorical_feature_columns = dataset.select_dtypes(exclude=['float64']).columns
-label = LabelEncoder()
-for column in categorical_feature_columns:
-    temp_notnull = dataset.loc[~dataset[column].isna()]
-    target = label.fit_transform(temp_notnull[column].astype(str))
-    dataset.loc[temp_notnull.index, column] = target#.astype(float)
-    dataset[column] = pd.to_numeric(dataset[column], errors='coerce')
-    # dataset.loc[temp_notnull.index, 'transformed_'+column] = target
-    # dataset = dataset.drop([column], 1)
-    # dataset[column] = label.fit_transform(dataset[column].astype(str))
+
+def label_encoder_without_NAN():
+    label = LabelEncoder()
+    for column in categorical_feature_columns:
+        temp_notnull = dataset.loc[~dataset[column].isna()]
+        target = label.fit_transform(temp_notnull[column].astype(str))
+        dataset.loc[temp_notnull.index, column] = target#.astype(float)
+        dataset[column] = pd.to_numeric(dataset[column], errors='coerce')
+        # dataset.loc[temp_notnull.index, 'transformed_'+column] = target
+        # dataset = dataset.drop([column], 1)
+        # dataset[column] = label.fit_transform(dataset[column].astype(str))
 # dataset.apply(pd.to_numeric, errors='ignore')
 # df.apply(pd.to_numeric, errors='ignore')
 # dataset['Embarked'] = pd.to_numeric(dataset['Embarked'], errors='coerce')
@@ -88,28 +90,28 @@ dataset['Age'] = dataset['Age'].mask(dataset['Age'].isna(), dataset['Pclass'].ma
 map_age_pclass = dataset[['Fare', 'Pclass']].dropna().groupby('Pclass').mean().to_dict()
 dataset['Fare'] = dataset['Fare'].mask(dataset['Fare'].isna(), dataset['Pclass'].map(map_age_pclass['Fare']))
 
-map_age_pclass = dataset[['Ticket', 'Parch']].dropna().groupby('Parch').median().to_dict()
-dataset['Ticket'] = dataset['Ticket'].mask(dataset['Ticket'].isna(), dataset['Parch'].map(map_age_pclass['Ticket']))
+# map_age_pclass = dataset[['Ticket', 'Parch']].dropna().groupby('Parch').median().to_dict()
+# dataset['Ticket'] = dataset['Ticket'].mask(dataset['Ticket'].isna(), dataset['Parch'].map(map_age_pclass['Ticket']))
 
-map_age_pclass = dataset[['Embarked', 'Sex']].dropna().groupby('Sex').median().to_dict()
-dataset['Embarked_Sex'] = dataset['Embarked'].mask(dataset['Embarked'].isna(), dataset['Sex'].map(map_age_pclass['Embarked']))
-map_age_pclass = dataset[['Embarked', 'Pclass']].dropna().groupby('Pclass').median().to_dict()
-dataset['Embarked_Pclass'] = dataset['Embarked'].mask(dataset['Embarked'].isna(), dataset['Pclass'].map(map_age_pclass['Embarked']))
-dataset = dataset.drop(['Embarked'],1)
+# map_age_pclass = dataset[['Embarked', 'Sex']].dropna().groupby('Sex').median().to_dict()
+# dataset['Embarked_Sex'] = dataset['Embarked'].mask(dataset['Embarked'].isna(), dataset['Sex'].map(map_age_pclass['Embarked']))
+# map_age_pclass = dataset[['Embarked', 'Pclass']].dropna().groupby('Pclass').median().to_dict()
+# dataset['Embarked_Pclass'] = dataset['Embarked'].mask(dataset['Embarked'].isna(), dataset['Pclass'].map(map_age_pclass['Embarked']))
+# dataset = dataset.drop(['Embarked'],1)
 
-map_age_pclass = dataset[['Cabin', 'Sex']].dropna().groupby('Sex').median().to_dict()
-dataset['Cabin_Sex'] = dataset['Cabin'].mask(dataset['Cabin'].isna(), dataset['Sex'].map(map_age_pclass['Cabin']))
-map_age_pclass = dataset[['Cabin', 'Pclass']].dropna().groupby('Pclass').median().to_dict()
-dataset['Cabin_Pclass'] = dataset['Cabin'].mask(dataset['Cabin'].isna(), dataset['Pclass'].map(map_age_pclass['Cabin']))
-dataset = dataset.drop(['Cabin'],1)
+# map_age_pclass = dataset[['Cabin', 'Sex']].dropna().groupby('Sex').median().to_dict()
+# dataset['Cabin_Sex'] = dataset['Cabin'].mask(dataset['Cabin'].isna(), dataset['Sex'].map(map_age_pclass['Cabin']))
+# map_age_pclass = dataset[['Cabin', 'Pclass']].dropna().groupby('Pclass').median().to_dict()
+# dataset['Cabin_Pclass'] = dataset['Cabin'].mask(dataset['Cabin'].isna(), dataset['Pclass'].map(map_age_pclass['Cabin']))
+# dataset = dataset.drop(['Cabin'],1)
 
-# dataset["Cabin"] = dataset["Cabin"].fillna("Nan")
+dataset["Cabin"] = dataset["Cabin"].fillna("Nan")
 # # print('Cabin Whole Dataset:\n', dataset.head())
 
-# dataset["Ticket"] = dataset["Ticket"].fillna("Nan")
+dataset["Ticket"] = dataset["Ticket"].fillna("Nan")
 
 
-# dataset["Embarked"] = dataset["Embarked"].fillna("Nan")
+dataset["Embarked"] = dataset["Embarked"].fillna("Nan")
 
 # print('Whole Dataset:\n', dataset.head())
 
@@ -125,9 +127,9 @@ dataset = dataset.drop(['Cabin'],1)
 # categorical_feature_columns = dataset.select_dtypes(exclude=['float64']).columns
 # # print('Categorical features:', categorical_feature_columns)
 
-# label = LabelEncoder()
-# for column in categorical_feature_columns:
-#     dataset[column] = label.fit_transform(dataset[column].astype(str))
+label = LabelEncoder()
+for column in categorical_feature_columns:
+    dataset[column] = label.fit_transform(dataset[column].astype(str))
 
 # print('Whole Dataset:\n', dataset.head())
 # # print('Description of dataset:\n', dataset.describe(include='all'))
@@ -151,7 +153,7 @@ for col in dataset.columns:
 # print('Whole Dataset:\n', dataset.head())
 
 
-dataset = one_hot_encoding(dataset, cols=['Sex', 'Embarked_Sex', 'Embarked_Pclass'])
+dataset = one_hot_encoding(dataset, cols=['Sex', 'Embarked'])
 print('Whole Dataset:\n', dataset.head(), dataset.columns)
 
 
@@ -174,4 +176,4 @@ ypred = rf.predict(dataset[train_len:])
 print("ypred:\n", ypred)
 
 
-submit("submission4-one-hot-encoding(using corr on all).csv", test, ypred)
+submit("submission5-one-hot-encoding(using corr on age,feat).csv", test, ypred)
