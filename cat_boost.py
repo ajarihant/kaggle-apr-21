@@ -20,22 +20,37 @@ root_path = "./"
 train = pd.read_csv(os.path.join(root_path, 'train.csv'))
 test = pd.read_csv(os.path.join(root_path, 'test.csv'))
 dataset = pd.concat([train, test], axis = 0, ignore_index = True)
+# print(dataset)
 
+dataset = pd.concat([dataset, dataset['Name'].str.split(',', expand=True)], axis=1)
+dataset = dataset.rename(columns={0:'LastName', 1: 'FirstName'})
+dataset['LastName'] = dataset["LastName"].str.len()
+dataset['FirstName'] = dataset["FirstName"].str[1:]
+dataset['FirstName'] = dataset['FirstName'].str.len()
+dataset['TicketCode'] = dataset['Ticket'].str.replace('[^\w\s]','')
+dataset['TicketCode'] = dataset['TicketCode'].str.replace(' ','')
+dataset['TicketCode'] = dataset['TicketCode'].fillna('NA')
+dataset['TicketCode'] = dataset['TicketCode'].replace('(\d)', '', regex=True)
+dataset['TicketNumber'] = dataset['Ticket'].str.extract('(\d+)')
+dataset['TicketNumber'] = dataset['TicketNumber'].astype(float)
+dataset['TicketNumber'] = dataset['TicketNumber'].fillna(0)
+dataset['AgeBin']= pd.cut(dataset['Age'], [-np.inf, 20, 40, 60, 80, np.inf], right=False)
 dataset['Cabin'] = dataset["Cabin"].str[0]
-dataset['Ticket'] = dataset['Ticket'].fillna('NA')
 dataset['Cabin'] = dataset['Cabin'].fillna('NA')
 dataset['Embarked'] = dataset['Embarked'].fillna('NA')
 dataset['Fare'] = dataset['Fare'].fillna(np.mean(dataset['Fare']))
-dataset['Age'] = dataset['Age'].fillna(np.mean(dataset['Age']))
-dataset = dataset.drop(['PassengerId'], axis=1)
 
-cat_features = ['Pclass', 'Sex', 'Cabin', 'Embarked', 'Name', 'Ticket']
+dataset = dataset.drop(['Name', 'Ticket', 'Age', 'PassengerId'], axis=1)
+cat_features = ['Pclass', 'Sex', 'Cabin', 'Embarked', 'TicketCode', 'AgeBin']
+
 cont_features = [col for col in dataset.columns if col not in cat_features + ['Survived']]
 features = cat_features + cont_features
+print(dataset.head())
 
 label_encoder = LabelEncoder()
 for col in cat_features:
-    dataset[col] = label_encoder.fit_transform(dataset[col])
+    print(col)
+    dataset[col] = label_encoder.fit_transform(dataset[col].astype(str))
 
 train = dataset.iloc[:100000,:]
 test = dataset.iloc[100000:,:]
@@ -53,6 +68,25 @@ for fold, (train_idx, valid_idx) in enumerate(skf.split(train[features], train['
     X_valid = train.iloc[valid_idx]
     y_valid = X_valid['Survived']
     X_valid = X_valid.drop('Survived', axis=1)
+
+    # params = {'iterations': 10000,
+    #               'use_best_model':True ,
+    #               'eval_metric': 'AUC', # 'Accuracy'
+    #               'loss_function':'Logloss',
+    #               'od_type':'Iter',
+    #               'od_wait':500,
+    #               'depth': 6, # [4, 10]
+    #               'l2_leaf_reg': 3,
+    #               # random_strength ??
+    #               'bootstrap_type': 'Bayesian',
+    #               'bagging_temperature': 2,
+    #               'max_bin': 254,
+    #               'grow_policy': 'SymmetricTree',
+    #               'cat_features': cat_features,
+    #               'verbose': 500,
+    #               'random_seed': 314,
+    #               'task_type': "GPU",
+    #      }
 
     model = CatBoostClassifier(
         verbose=0,
@@ -77,5 +111,5 @@ print(f'OOF Accuracy: ', accuracy_score(train['Survived'], train_oof))
 # print(test_predicts)
 
 test_predicts['voting'] = np.where(test_predicts.sum(axis=1) > (folds/2), 1, 0)
-# submission = pd.DataFrame({'PassengerId': pd.read_csv(os.path.join(root_path, 'test.csv'))['PassengerId'],'Survived': test_predicts['voting']})
-# submission.to_csv('submission6-cat_boost.csv', index=False)
+submission = pd.DataFrame({'PassengerId': pd.read_csv(os.path.join(root_path, 'test.csv'))['PassengerId'],'Survived': test_predicts['voting']})
+# submission.to_csv('submission7-cat_boost.csv', index=False)
