@@ -10,6 +10,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score
+from lightgbm import LGBMClassifier
 
 SEED = 2021
 N_SPLITS = 10
@@ -54,42 +55,48 @@ X_train = dataset[:train.shape[0]].drop(TARGET, axis=1)
 X_test = dataset[train.shape[0]:].drop(TARGET, axis=1).reset_index(drop=True)
 y_train = train[TARGET]
 
-parameters = {
-    'max_depth': np.arange(2, 5, dtype=int),
-    'min_samples_leaf':  np.arange(2, 5, dtype=int)
+lgbm_parameters = {
+    'reg_alpha': 0.00388218567052311,
+    'reg_lambda': 8.972335390951376e-05,
+    'colsample_bytree': 0.18375780999902297,
+    'subsample': 0.013352256062576087,
+    'learning_rate': 0.002597839272059483,
+    'max_depth': 44,
+    'num_leaves': 15,
+    'min_child_samples': 89,
+    'cat_smooth': 56, 
+    'cat_l2': 22.375773634793603,
+    'max_bin': 33, 
+    'min_data_per_group': 89
 }
-classifier = DecisionTreeClassifier(random_state=SEED)
-model = GridSearchCV(
-    estimator=classifier,
-    param_grid=parameters,
-    scoring='accuracy',
-    cv=10,
-    n_jobs=-1)
-model.fit(X_train, y_train)
-best_parameters = model.best_params_
-print(best_parameters)
+lgbm_parameters['metric'] = 'binary_logloss'
+lgbm_parameters['objective'] = 'binary'
+lgbm_parameters['n_estimators'] = 15000
 
 dtm_oof = np.zeros(train.shape[0])
-dtm_preds = 0
+lgbm_test_pred = 0#np.zeros(len(test))
 skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
 for fold, (train_idx, valid_idx) in enumerate(skf.split(X_train, y_train)):
     print(f"===== FOLD {fold} =====")
     X_tr, y_tr = X_train.iloc[train_idx], y_train.iloc[train_idx]
     X_va, y_va = X_train.iloc[valid_idx], y_train.iloc[valid_idx]
-    model = DecisionTreeClassifier(
-        max_depth=best_parameters['max_depth'],
-        min_samples_leaf=best_parameters['min_samples_leaf'],
-        random_state=SEED
-    )
-    model.fit(X_tr, y_tr)
-    dtm_oof[valid_idx] = model.predict_proba(X_va)[:, 1]
-    dtm_preds += model.predict_proba(X_test)[: ,1] / N_SPLITS
+    lgbm_model = LGBMClassifier(**lgbm_parameters)
+
+    lgbm_model.fit(X_tr, y_tr, eval_set = ((X_va,y_va)),verbose = 1000,categorical_feature = label_cols, early_stopping_rounds = 1000)  
+    lgbm_test_pred += lgbm_model.predict_proba(X_test)[:,1]/N_SPLITS
+    # lgbm_auc.append(roc_auc_score(y_valid_idx, lgbm_model.predict_proba(x_valid_idx)[:,1]))
+    # lgbm_acc.append(accuracy_score(y_valid_idx,(lgbm_model.predict_proba(x_valid_idx)[:,1] > 0.5).astype(int)))
+
+
+    # model.fit(X_tr, y_tr)
+    dtm_oof[valid_idx] = lgbm_model.predict_proba(X_va)[:, 1]
+    # dtm_preds += model.predict_proba(X_test)[: ,1] / N_SPLITS
     acc_score = accuracy_score(y_va, np.where(dtm_oof[valid_idx]>0.5, 1, 0))
     print(f"===== ACCURACY SCORE {acc_score:.6f} =====\n")
 acc_score = accuracy_score(y_train, np.where(dtm_oof>0.5, 1, 0))
 print(f"===== ACCURACY SCORE {acc_score:.6f} =====")
 
 # Saving the result
-# submission = pd.read_csv(os.path.join(root_path, 'sample_submission.csv'))
-# submission['Survived'] = np.where(dtm_preds > 0.5, 1, 0)
-# submission.to_csv("submission10-decision_tree(age-bin,family-size).csv", index=False)
+submission = pd.read_csv(os.path.join(root_path, 'sample_submission.csv'))
+submission['Survived'] = np.where(lgbm_test_pred > 0.5, 1, 0)
+submission.to_csv("submission12-lgbm).csv", index=False)

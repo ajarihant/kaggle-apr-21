@@ -53,19 +53,7 @@ for col in dataset.columns:
 
 categorical_feature_columns = dataset.select_dtypes(exclude=['float64']).columns
 
-def label_encoder_without_NAN():
-    label = LabelEncoder()
-    for column in categorical_feature_columns:
-        temp_notnull = dataset.loc[~dataset[column].isna()]
-        target = label.fit_transform(temp_notnull[column].astype(str))
-        dataset.loc[temp_notnull.index, column] = target#.astype(float)
-        dataset[column] = pd.to_numeric(dataset[column], errors='coerce')
-        # dataset.loc[temp_notnull.index, 'transformed_'+column] = target
-        # dataset = dataset.drop([column], 1)
-        # dataset[column] = label.fit_transform(dataset[column].astype(str))
-# dataset.apply(pd.to_numeric, errors='ignore')
-# df.apply(pd.to_numeric, errors='ignore')
-# dataset['Embarked'] = pd.to_numeric(dataset['Embarked'], errors='coerce')
+
 
 
 
@@ -176,4 +164,4 @@ ypred = rf.predict(dataset[train_len:])
 print("ypred:\n", ypred)
 
 
-submit("submission5-one-hot-encoding(using corr on age,feat).csv", test, ypred)
+# submit("submission5-one-hot-encoding(using corr on age,feat).csv", test, ypred)
